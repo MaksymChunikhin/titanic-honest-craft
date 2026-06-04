@@ -1,0 +1,16 @@
+# Зафиксированные версии для воспроизводимости / pinned for reproducibility
+# Тестировалось на Python 3.13 (conda base)
+scikit-learn==1.8.0
+pandas==3.0.2
+numpy==2.4.4
+scipy==1.17.1
+matplotlib==3.10.9
+seaborn==0.13.2
+optuna==4.8.0
+xgboost==3.2.0
+lightgbm==4.6.0
+joblib==1.5.3
+pyarrow==24.0.0
+# для запуска ноутбуков / to run notebooks
+jupyter
+nbconvert

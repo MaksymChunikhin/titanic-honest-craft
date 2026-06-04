@@ -1,0 +1,23 @@
+# Данные и артефакты (регенерируются) / regenerable artifacts
+data/
+models/
+optuna/*.db
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Среды / envs
+.venv/
+venv/
+.env
+
+# Инструменты / tooling (не для портфолио)
+.claude/
+
+# OS / IDE
+.DS_Store
+__MACOSX/
+.vscode/
+.idea/
