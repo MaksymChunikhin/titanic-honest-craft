@@ -2,6 +2,7 @@
 data/
 models/
 optuna/*.db
+catboost_info/
 
 # Python
 __pycache__/
