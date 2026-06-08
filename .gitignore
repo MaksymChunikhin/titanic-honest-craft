@@ -22,3 +22,6 @@ venv/
 __MACOSX/
 .vscode/
 .idea/
+
+# Локальные файлы / local-only
+task2_solution.py
