@@ -1,6 +1,12 @@
 # Titanic Survival Prediction (Random Forest)
 
-Учебный ML-проект на классическом датасете Titanic (OpenML). По характеристикам пассажира предсказывается вероятность выживания. Основной акцент сделан на построении воспроизводимого ML pipeline: feature engineering, кросс-валидация, сравнение моделей, подбор гиперпараметров и интерпретация результатов.
+Учебный ML-проект на классическом датасете Titanic (OpenML): по характеристикам пассажира предсказывается вероятность выживания. Проект демонстрирует полный воспроизводимый цикл решения задачи — от EDA до интерпретации модели — с акцентом на корректную методологию: препроцессинг внутри `Pipeline`, исключение утечек, честное сравнение моделей по кросс-валидации.
+
+**Ключевой результат:** 5-fold CV accuracy **0.814 ± 0.023**, hold-out test accuracy **0.851** (RandomForest, финальная проверка на отложенной выборке).
+
+> **EDA → Feature Engineering → Pipeline → Model Comparison → Hyperparameter Tuning → Interpretation**
+
+---
 
 ## Задача
 
@@ -8,9 +14,9 @@
 
 Условия задания:
 
-* финальная модель — `RandomForestClassifier`;
-* train/test split 80/20 (`random_state=42`);
-* способ обработки пропусков и кодирования категориальных признаков выбирается самостоятельно.
+- финальная модель — `RandomForestClassifier`;
+- train/test split 80/20 (`random_state=42`, стратификация по таргету);
+- способ обработки пропусков и кодирования категориальных признаков выбирается самостоятельно.
 
 ---
 
@@ -22,113 +28,58 @@ from sklearn.datasets import fetch_openml
 df = fetch_openml("titanic", version=1, as_frame=True).frame
 ```
 
-Размер датасета:
+1309 объектов, 14 исходных признаков.
 
-* 1309 объектов;
-* 14 исходных признаков.
-
-Из датасета были исключены признаки, содержащие утечку информации:
-
-* `boat`
-* `body`
-
-Также после извлечения признаков были удалены сырые текстовые поля:
-
-* `name`
-* `ticket`
-* `cabin`
+Исключены признаки с утечкой целевой информации: `boat`, `body` (известны только после катастрофы). После извлечения признаков удалены сырые текстовые поля `name`, `ticket`, `cabin` и шумный `home.dest`.
 
 ---
 
 ## Feature Engineering
 
-На основе исходных признаков было создано около 17 дополнительных признаков.
+На основе исходных признаков создано ~17 новых; итоговый набор — 23 колонки.
 
-### Семья
+| Группа | Признаки |
+| --- | --- |
+| Семья | `FamilySize`, `IsAlone`, `FamilyGroup`, `FarePerPerson`, `FemaleNotAlone` |
+| Имя | `Title` (с группировкой редких титулов) |
+| Билет | `TicketCount`, `SharedTicket`, `TicketPrefix` |
+| Каюта | `HasCabin`, `CabinLetter` |
+| Возраст | `AgeGroup`, `Child` |
+| Взаимодействия | `SexPclass`, `TitlePclass`, `ChildPclass` |
 
-* `FamilySize`
-* `IsAlone`
-* `FamilyGroup`
-* `FarePerPerson`
-* `FemaleWithChildren`
-
-### Имя пассажира
-
-* `Title`
-
-### Билет
-
-* `TicketCount`
-* `SharedTicket`
-* `TicketPrefix`
-
-### Каюта
-
-* `HasCabin`
-* `CabinLetter`
-
-### Возраст
-
-* `AgeGroup`
-* `Child`
-
-### Взаимодействия признаков
-
-* `SexPclass`
-* `TitlePclass`
-* `ChildPclass`
-
-Итоговый набор признаков содержит 23 колонки.
+Baseline на сырых признаках без FE построен для сравнения — feature engineering даёт заметный прирост над ним.
 
 ---
 
 ## Препроцессинг
 
-Вся подготовка данных реализована через `sklearn.Pipeline`.
+Вся подготовка данных — внутри `sklearn.Pipeline` + `ColumnTransformer`, поэтому импутация и кодирование выполняются только на train-фолдах внутри кросс-валидации, без утечки статистик из валидационных данных.
 
-### Числовые признаки
-
-* медианное заполнение пропусков.
-
-### Категориальные признаки
-
-* заполнение наиболее частым значением;
-* `OneHotEncoder(handle_unknown="ignore")`.
+- Числовые признаки: медианное заполнение пропусков.
+- Категориальные: заполнение модой + `OneHotEncoder(handle_unknown="ignore")`.
 
 ---
 
 ## Сравнение моделей
 
-Были протестированы несколько алгоритмов:
+На одинаковом сплите и одинаковом препроцессинге протестированы: Logistic Regression, Random Forest, ExtraTrees, HistGradientBoosting, CatBoost, LightGBM, XGBoost.
 
-* Logistic Regression
-* Random Forest
-* HistGradientBoosting
-* CatBoost
-* LightGBM
-* XGBoost
-* ExtraTrees
+Результаты после подбора гиперпараметров (основная метрика — CV):
 
-После сравнения и подбора гиперпараметров были получены следующие результаты:
+| Модель | CV accuracy | Test accuracy |
+| --- | --- | --- |
+| HistGradientBoosting | **0.8176** | 0.8321 |
+| RandomForest (manual) | 0.8137 | 0.8511 |
+| RandomForest (Optuna) | 0.8137 | 0.8435 |
+| CatBoost | 0.8070 | 0.8511 |
 
-| Модель                | CV accuracy | Test accuracy |
-| --------------------- | ----------: | ------------: |
-| HistGradientBoosting  |  **0.8176** |        0.8321 |
-| RandomForest (manual) |      0.8137 |    **0.8511** |
-| RandomForest (Optuna) |      0.8137 |        0.8435 |
-| CatBoost              |      0.8070 |    **0.8511** |
-
-Несмотря на то, что HistGradientBoosting показал лучший результат на кросс-валидации, на отложенной тестовой выборке лучшие результаты продемонстрировали RandomForest и CatBoost.
+Разница между моделями укладывается в std кросс-валидации (±0.02) — на датасете такого размера они статистически неразличимы, а ранжирование по одиночному hold-out нестабильно (1 объект теста ≈ 0.4% accuracy). Поэтому выбор модели делается по CV, а test используется один раз — как финальная проверка.
 
 ---
 
-## Выбор финальной модели
+## Финальная модель
 
-Параметры RandomForest были предварительно подобраны вручную на основе серии экспериментов и общих рекомендаций по настройке ансамблей.
-
-Дополнительно был проведён автоматический подбор гиперпараметров с помощью Optuna. Полученные параметры дали очень близкий результат, однако не улучшили качество модели на тестовой выборке.
-
-Поскольку по условию задания финальной моделью должен быть RandomForest, был выбран вариант с ручной настройкой:
+По условию задания финальная модель — RandomForest. Гиперпараметры подбирались двумя способами: вручную (серия экспериментов по CV) и автоматически через Optuna (50 trials, TPE). Optuna дала результат, идентичный ручной настройке — потолок качества здесь определяется данными и признаками, а не гиперпараметрами.
 
 ```python
 RandomForestClassifier(
@@ -137,85 +88,62 @@ RandomForestClassifier(
     min_samples_leaf=3,
     min_samples_split=10,
     max_features="sqrt",
-    random_state=42
+    random_state=42,
 )
 ```
 
-### Финальные метрики
-
-* Test Accuracy: **0.8511**
-* 5-fold CV Accuracy: **0.814 ± 0.023**
+**Метрики:** 5-fold CV accuracy 0.814 ± 0.023, test accuracy 0.851.
 
 ---
 
 ## Интерпретация модели
 
-Для анализа модели были использованы:
+Feature Importance, SHAP, Confusion Matrix, Classification Report, ROC-AUC и анализ ошибок.
 
-* Feature Importance;
-* SHAP;
-* Confusion Matrix;
-* Classification Report;
-* ROC-AUC;
-* анализ ошибок модели.
-
-Наиболее важными признаками оказались:
-
-* пол пассажира;
-* титул (`Title`);
-* класс билета (`Pclass`);
-* стоимость билета (`Fare`);
-* размер семьи (`FamilySize`);
-* наличие информации о каюте (`HasCabin`).
+Наиболее важные признаки: пол, `Title`, `Pclass`, `Fare`, `FamilySize`, `HasCabin` — что согласуется с историческим контекстом («женщины и дети, первый класс»).
 
 ---
 
 ## Структура проекта
 
-```text
+```
 notebooks/
-│
-├── 01_EDA.ipynb
-├── 02_Feature_Engineering.ipynb
-├── 03_Model_Comparison.ipynb
-├── 04_Model_Tuning.ipynb
-└── 05_Model_Interpretation.ipynb
+├── 01_EDA.ipynb                    # обзор данных, пропуски, таргет
+├── 02_Feature_Engineering.ipynb    # FE, пайплайн, baseline vs FE
+├── 03_Model_Comparison.ipynb       # CV-сравнение 7 моделей
+├── 04_Model_Tuning.ipynb           # Optuna + кэширование studies
+└── 05_Model_Interpretation.ipynb   # SHAP, ошибки, метрики
 
-data/
-│
-└── titanic_fe.parquet
-
-models/
-│
-├── best_model.pkl
-├── study_rf.pkl
-├── study_hgb.pkl
-└── study_cat.pkl
+data/        # генерируется ноутбуком 02 (titanic_fe.parquet)
+models/      # генерируется ноутбуком 04 (модели и optuna studies)
 
 requirements.txt
 README.md
 ```
 
----
+Папки `data/` и `models/` не хранятся в репозитории — все артефакты воспроизводятся запуском ноутбуков по порядку. Optuna studies кэшируются на диск, поэтому повторный запуск ноутбука 04 не перезапускает тюнинг.
 
-## Используемый стек
+## Запуск
 
-* Python 3.13
-* Pandas
-* NumPy
-* Scikit-learn
-* Optuna
-* SHAP
-* CatBoost
-* LightGBM
-* XGBoost
-* Matplotlib
-* Seaborn
+```bash
+pip install -r requirements.txt
+jupyter lab
+# выполнить ноутбуки 01 → 05 по порядку
+```
+
+Тестировалось на Python 3.13, версии зависимостей зафиксированы в `requirements.txt`.
 
 ---
 
-## Итог
+## Стек
 
-Проект охватывает полный цикл решения задачи машинного обучения:
+Python 3.13 · Pandas · NumPy · Scikit-learn · Optuna · SHAP · CatBoost · LightGBM · XGBoost · Matplotlib · Seaborn
 
-> **EDA → Feature Engineering → Pipeline → Model Comparison → Hyperparameter Tuning → Model Interpretation**
+---
+
+## Выводы
+
+- Воспроизводимый пайплайн с препроцессингом внутри CV и исключёнными утечками.
+- Feature engineering важнее выбора алгоритма: семь моделей сошлись к одному уровню качества, а прирост дали именно новые признаки.
+- Тюнинг гиперпараметров на маленьком датасете упирается в потолок данных — Optuna не улучшила ручную настройку.
+- Оценивать модели на малых данных корректно по кросс-валидации; одиночный hold-out годится только для финальной проверки.
