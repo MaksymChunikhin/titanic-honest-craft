@@ -14,9 +14,6 @@ __pycache__/
 venv/
 .env
 
-# Инструменты / tooling (не для портфолио)
-.claude/
-
 # OS / IDE
 *:Zone.Identifier
 .DS_Store
