@@ -18,6 +18,7 @@ venv/
 .claude/
 
 # OS / IDE
+*:Zone.Identifier
 .DS_Store
 __MACOSX/
 .vscode/
